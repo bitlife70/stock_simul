@@ -1,0 +1,251 @@
+{
+  "execution_summary": {
+    "timestamp": "2025-08-02T07:49:54.386814",
+    "execution_time_seconds": 22.290103435516357,
+    "overall_score": 80.0,
+    "health_status": "healthy"
+  },
+  "category_scores": {
+    "architecture": 100.0,
+    "api_health": 33.33333333333333,
+    "data_integration": 66.66666666666666,
+    "backtesting": 100.0,
+    "frontend": 100.0
+  },
+  "detailed_results": {
+    "component_architecture": {
+      "components": {
+        "backtesting_engine.py": {
+          "exists": true,
+          "size_kb": 35.87,
+          "status": "found"
+        },
+        "backend/optimized_api_server.py": {
+          "exists": true,
+          "size_kb": 27.35,
+          "status": "found"
+        },
+        "backend/services/korean_strategy_engine.py": {
+          "exists": true,
+          "size_kb": 42.01,
+          "status": "found"
+        },
+        "backend/services/korean_risk_manager.py": {
+          "exists": true,
+          "size_kb": 35.55,
+          "status": "found"
+        },
+        "backend/core/cache_manager.py": {
+          "exists": true,
+          "size_kb": 15.7,
+          "status": "found"
+        },
+        "backend/core/performance_monitor.py": {
+          "exists": true,
+          "size_kb": 26.13,
+          "status": "found"
+        },
+        "frontend/src/components/portfolio/PortfolioDashboard.tsx": {
+          "exists": true,
+          "size_kb": 14.88,
+          "status": "found"
+        },
+        "frontend/src/components/strategy/KoreanStrategyBuilder.tsx": {
+          "exists": true,
+          "size_kb": 29.51,
+          "status": "found"
+        },
+        "frontend/src/components/analytics/AnalyticsDashboard.tsx": {
+          "exists": true,
+          "size_kb": 31.66,
+          "status": "found"
+        },
+        "frontend/src/components/risk/RiskManagementDashboard.tsx": {
+          "exists": true,
+          "size_kb": 32.12,
+          "status": "found"
+        },
+        "frontend/src/components/realtime/MarketMonitoringDashboard.tsx": {
+          "exists": true,
+          "size_kb": 12.97,
+          "status": "found"
+        }
+      },
+      "total_components": 11,
+      "found_components": 11,
+      "completeness_percentage": 100.0,
+      "status": "excellent"
+    },
+    "api_health": {
+      "basic_api": {
+        "status": "offline",
+        "error": "Connection refused"
+      },
+      "enhanced_api": {
+        "status": "healthy",
+        "response_time_ms": 2036.1294746398926,
+        "version": "unknown",
+        "korean_market_ready": false
+      },
+      "optimized_api": {
+        "status": "offline",
+        "error": "Connection refused"
+      }
+    },
+    "data_integration": {
+      "enhanced_api": {
+        "stock_list": {
+          "status": "success",
+          "count": 5,
+          "has_korean_names": true
+        },
+        "stock_data": {
+          "status": "success",
+          "data_points": 365,
+          "has_ohlcv": true
+        },
+        "strategies": {
+          "status": "failed",
+          "code": 500
+        }
+      }
+    },
+    "backtesting": {
+      "standalone": {
+        "status": "success",
+        "execution_time_ms": 1360.959529876709,
+        "total_return": 0.0,
+        "win_rate": 0.0,
+        "total_trades": 0,
+        "has_details": true
+      },
+      "enhanced_api": {
+        "status": "success",
+        "total_return": 0.0,
+        "win_rate": 0.0,
+        "total_trades": 0
+      }
+    },
+    "korean_features": {
+      "currency_formatting": {
+        "1000": {
+          "formatted": "1,000원",
+          "has_korean": true,
+          "has_units": false
+        },
+        "15000": {
+          "formatted": "2만원",
+          "has_korean": true,
+          "has_units": true
+        },
+        "1500000": {
+          "formatted": "150만원",
+          "has_korean": true,
+          "has_units": true
+        },
+        "250000000": {
+          "formatted": "2.5억원",
+          "has_korean": true,
+          "has_units": true
+        }
+      },
+      "symbol_validation": {
+        "005930": {
+          "valid": true,
+          "market": "KOSPI"
+        },
+        "000660": {
+          "valid": true,
+          "market": "KOSPI"
+        },
+        "035420": {
+          "valid": true,
+          "market": "KOSPI"
+        },
+        "12345": {
+          "valid": false,
+          "market": "invalid"
+        },
+        "AAPL": {
+          "valid": false,
+          "market": "invalid"
+        }
+      },
+      "market_hours": {
+        "open_time": "09:00",
+        "close_time": "15:30",
+        "lunch_break": "11:30-12:30",
+        "timezone": "Asia/Seoul"
+      }
+    },
+    "frontend_components": {
+      "portfolio_dashboard": {
+        "exists": true,
+        "size_kb": 14.88,
+        "has_korean_content": true,
+        "has_typescript": true,
+        "status": "complete"
+      },
+      "strategy_builder": {
+        "exists": true,
+        "size_kb": 29.51,
+        "has_korean_content": true,
+        "has_typescript": true,
+        "status": "complete"
+      },
+      "analytics_dashboard": {
+        "exists": true,
+        "size_kb": 31.66,
+        "has_korean_content": true,
+        "has_typescript": true,
+        "status": "complete"
+      },
+      "risk_dashboard": {
+        "exists": true,
+        "size_kb": 32.12,
+        "has_korean_content": true,
+        "has_typescript": true,
+        "status": "complete"
+      },
+      "market_monitoring": {
+        "exists": true,
+        "size_kb": 12.97,
+        "has_korean_content": true,
+        "has_typescript": true,
+        "status": "complete"
+      },
+      "korean_utils": {
+        "exists": true,
+        "size_kb": 8.45,
+        "has_korean_content": true,
+        "has_typescript": false,
+        "status": "complete"
+      },
+      "websocket_service": {
+        "exists": true,
+        "size_kb": 11.55,
+        "has_korean_content": false,
+        "has_typescript": true,
+        "status": "complete"
+      },
+      "dependencies": {
+        "total_dependencies": 23,
+        "key_dependencies_present": 8,
+        "missing_dependencies": [],
+        "status": "complete"
+      }
+    }
+  },
+  "recommendations": [
+    "Some API servers are not responding - check server status",
+    "Data integration issues detected - check API endpoints"
+  ],
+  "system_capabilities": {
+    "korean_market_optimized": true,
+    "professional_backtesting": true,
+    "real_time_monitoring": true,
+    "risk_management": true,
+    "advanced_analytics": true,
+    "multilingual_support": true
+  }
+}

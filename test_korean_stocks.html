@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Korean Stocks API Test</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { padding: 8px 15px; margin: 5px; }
+        input { padding: 5px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>🇰🇷 Korean Stocks API Test</h1>
+    
+    <div class="test-section">
+        <h2>📊 API Status</h2>
+        <button onclick="testHealth()">Health Check</button>
+        <div id="health-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔍 Stock Search</h2>
+        <input type="text" id="searchInput" placeholder="삼성, 카카오, 005930, 게임 등">
+        <button onclick="searchStocks()">Search</button>
+        <div id="search-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📈 Popular Stocks</h2>
+        <button onclick="getPopularStocks()">Get Popular</button>
+        <div id="popular-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📋 All Stocks Sample</h2>
+        <button onclick="getAllStocks()">Get All (First 20)</button>
+        <div id="all-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8002';
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                document.getElementById('health-result').innerHTML = 
+                    `<strong>Status:</strong> ${data.status}<br>
+                     <strong>Total Stocks:</strong> ${data.total_stocks}`;
+            } catch (error) {
+                document.getElementById('health-result').innerHTML = 
+                    `<span style="color: red;">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function searchStocks() {
+            const query = document.getElementById('searchInput').value;
+            if (!query.trim()) {
+                alert('검색어를 입력하세요');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/stocks/search?q=${encodeURIComponent(query)}&limit=10`);
+                const data = await response.json();
+                
+                let html = `<strong>Search: "${data.query}"</strong><br>
+                           <strong>Results: ${data.total}</strong><br><br>`;
+                
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(stock => {
+                        html += `<div style="border-bottom: 1px solid #eee; padding: 5px;">
+                                <strong>${stock.name_kr} (${stock.symbol})</strong><br>
+                                <small>${stock.market} | ${stock.sector} | ₩${stock.current_price.toLocaleString()}</small>
+                                </div>`;
+                    });
+                } else {
+                    html += '<em>No results found</em>';
+                    if (data.suggestions) {
+                        html += '<br><br><strong>Suggestions:</strong><br>' + data.suggestions.join(', ');
+                    }
+                }
+                
+                document.getElementById('search-result').innerHTML = html;
+            } catch (error) {
+                document.getElementById('search-result').innerHTML = 
+                    `<span style="color: red;">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function getPopularStocks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/stocks/popular`);
+                const data = await response.json();
+                
+                let html = '<strong>Popular Searches:</strong><br>';
+                html += data.popular_searches.join(', ');
+                html += '<br><br><strong>Market Leaders:</strong><br>';
+                
+                data.market_leaders.slice(0, 5).forEach(stock => {
+                    html += `<div style="border-bottom: 1px solid #eee; padding: 5px;">
+                            <strong>${stock.name_kr} (${stock.symbol})</strong><br>
+                            <small>${stock.market} | ₩${stock.current_price.toLocaleString()}</small>
+                            </div>`;
+                });
+                
+                document.getElementById('popular-result').innerHTML = html;
+            } catch (error) {
+                document.getElementById('popular-result').innerHTML = 
+                    `<span style="color: red;">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function getAllStocks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/stocks?limit=20`);
+                const data = await response.json();
+                
+                let html = `<strong>Total Available: ${data.length}</strong><br><br>`;
+                
+                data.forEach(stock => {
+                    const changeColor = stock.change >= 0 ? 'red' : 'blue';
+                    html += `<div style="border-bottom: 1px solid #eee; padding: 5px;">
+                            <strong>${stock.name_kr} (${stock.symbol})</strong>
+                            <span style="color: ${changeColor};">${stock.change >= 0 ? '+' : ''}${stock.change}%</span><br>
+                            <small>${stock.market} | ${stock.sector} | ₩${stock.current_price.toLocaleString()}</small>
+                            </div>`;
+                });
+                
+                document.getElementById('all-result').innerHTML = html;
+            } catch (error) {
+                document.getElementById('all-result').innerHTML = 
+                    `<span style="color: red;">Error: ${error.message}</span>`;
+            }
+        }
+
+        // Auto-test on load
+        window.onload = function() {
+            testHealth();
+        }
+    </script>
+</body>
+</html>

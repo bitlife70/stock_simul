@@ -1,0 +1,73 @@
+{
+  "navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "strategies": "Strategies",
+    "backtest": "Backtest",
+    "portfolio": "Portfolio",
+    "settings": "Settings"
+  },
+  "common": {
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove",
+    "close": "Close",
+    "clear": "Clear",
+    "reset": "Reset",
+    "submit": "Submit",
+    "continue": "Continue",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous"
+  },
+  "stock": {
+    "search_placeholder": "Search stocks (e.g., Samsung Electronics, 005930)",
+    "no_results": "No search results",
+    "loading_data": "Loading stock data...",
+    "chart_title": "Stock Chart",
+    "no_chart_data": "No chart data available",
+    "select_stock": "Please select a stock",
+    "chart_loading": "Loading chart..."
+  },
+  "strategy": {
+    "title": "Strategy Configuration",
+    "basic_info": "Basic Information",
+    "strategy_name": "Strategy Name",
+    "strategy_name_placeholder": "My Investment Strategy",
+    "initial_capital": "Initial Capital",
+    "strategy_description": "Strategy Description",
+    "strategy_description_placeholder": "Enter a brief description of your strategy",
+    "template_selection": "Strategy Template",
+    "select_template": "Please select a template",
+    "parameters": "Parameter Settings",
+    "backtest_period": "Backtest Period",
+    "start_date": "Start Date",
+    "end_date": "End Date",
+    "selected_stock": "Selected Stock",
+    "run_backtest": "Run Backtest",
+    "save_strategy": "Save Strategy",
+    "running": "Running...",
+    "select_stock_first": "Please select a stock first.",
+    "current_amount": "Current Setting"
+  },
+  "validation": {
+    "required": "This field is required",
+    "min_capital": "Minimum 1,000,000 KRW required",
+    "strategy_name_required": "Please enter strategy name",
+    "template_required": "Please select a strategy template",
+    "start_date_required": "Please select start date",
+    "end_date_required": "Please select end date"
+  },
+  "currency": {
+    "krw": "KRW",
+    "format": "₩{{amount}}"
+  }
+}

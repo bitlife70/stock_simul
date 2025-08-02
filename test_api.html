@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Korean Stock API Test</h1>
+    
+    <div>
+        <h2>Health Check</h2>
+        <button onclick="testHealth()">Test Health</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div>
+        <h2>Stocks List</h2>
+        <button onclick="testStocks()">Test Stocks</button>
+        <div id="stocks-result"></div>
+    </div>
+    
+    <div>
+        <h2>Strategy Templates</h2>
+        <button onclick="testStrategies()">Test Strategies</button>
+        <div id="strategies-result"></div>
+    </div>
+
+    <script>
+        async function testHealth() {
+            try {
+                const response = await fetch('http://localhost:8001/health');
+                const data = await response.json();
+                document.getElementById('health-result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('health-result').innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testStocks() {
+            try {
+                const response = await fetch('http://localhost:8001/api/v1/stocks');
+                const data = await response.json();
+                document.getElementById('stocks-result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('stocks-result').innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+            }
+        }
+
+        async function testStrategies() {
+            try {
+                const response = await fetch('http://localhost:8001/api/v1/strategies/templates');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                document.getElementById('strategies-result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('strategies-result').innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

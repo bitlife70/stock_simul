@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""
+Daily CRON Job Setup for Korean Stock Data Updates
+Windows 작업 스케줄러 또는 Linux crontab 설정을 위한 스크립트
+"""
+
+import os
+import sys
+import platform
+from pathlib import Path
+
+def setup_windows_task():
+    """Windows 작업 스케줄러 설정"""
+    script_dir = Path(__file__).parent.absolute()
+    python_exe = sys.executable
+    update_script = script_dir / "run_batch_update.py"
+    
+    # Windows 작업 스케줄러 명령
+    task_name = "KoreanStockDataUpdate"
+    
+    # XML 형식의 작업 정의
+    task_xml = f"""<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Date>2024-01-01T09:00:00</Date>
+    <Author>Korean Stock Simulation</Author>
+    <Description>Daily update of Korean stock market data</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <CalendarTrigger>
+      <StartBoundary>2024-01-01T06:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+    </CalendarTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>true</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <DisallowStartOnRemoteAppSession>false</DisallowStartOnRemoteAppSession>
+    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT2H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>{python_exe}</Command>
+      <Arguments>"{update_script}"</Arguments>
+      <WorkingDirectory>{script_dir}</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>"""
+    
+    # XML 파일 저장
+    xml_file = script_dir / f"{task_name}.xml"
+    with open(xml_file, 'w', encoding='utf-16') as f:
+        f.write(task_xml)
+    
+    print("🪟 Windows 작업 스케줄러 설정")
+    print("=" * 40)
+    print(f"1. 생성된 XML 파일: {xml_file}")
+    print()
+    print("수동 설정 방법:")
+    print("1. 작업 스케줄러 열기 (taskschd.msc)")
+    print("2. '작업 가져오기' 클릭")
+    print(f"3. {xml_file} 선택")
+    print("4. 설정 확인 후 완료")
+    print()
+    print("또는 명령줄에서:")
+    print(f'schtasks /create /tn "{task_name}" /xml "{xml_file}"')
+    
+    return xml_file
+
+def setup_linux_cron():
+    """Linux crontab 설정"""
+    script_dir = Path(__file__).parent.absolute()
+    python_exe = sys.executable
+    update_script = script_dir / "run_batch_update.py"
+    log_file = script_dir / "logs" / "daily_update.log"
+    
+    # 로그 디렉토리 생성
+    log_file.parent.mkdir(exist_ok=True)
+    
+    # crontab 항목
+    cron_entry = f"0 6 * * * {python_exe} {update_script} >> {log_file} 2>&1"
+    
+    print("🐧 Linux Crontab 설정")
+    print("=" * 40)
+    print("다음 명령을 실행하세요:")
+    print()
+    print("1. crontab 편집:")
+    print("   crontab -e")
+    print()
+    print("2. 다음 줄 추가:")
+    print(f"   {cron_entry}")
+    print()
+    print("설명:")
+    print("  - 매일 오전 6시에 실행")
+    print(f"  - 로그는 {log_file}에 저장")
+    print("  - 네트워크 연결 필요")
+    
+    # 스크립트 실행 권한 설정
+    os.chmod(update_script, 0o755)
+    print(f"✅ 실행 권한 설정 완료: {update_script}")
+    
+    return cron_entry
+
+def setup_service_script():
+    """시스템 서비스 스크립트 생성"""
+    script_dir = Path(__file__).parent.absolute()
+    
+    if platform.system() == "Windows":
+        # Windows 배치 파일
+        batch_content = f"""@echo off
+cd /d "{script_dir}"
+python run_batch_update.py
+if %errorlevel% neq 0 (
+    echo Error occurred during stock data update
+    exit /b %errorlevel%
+)
+echo Stock data update completed successfully
+"""
+        batch_file = script_dir / "daily_update.bat"
+        with open(batch_file, 'w', encoding='utf-8') as f:
+            f.write(batch_content)
+        
+        print(f"📄 Windows 배치 파일 생성: {batch_file}")
+        return batch_file
+        
+    else:
+        # Linux 셸 스크립트
+        shell_content = f"""#!/bin/bash
+# Korean Stock Data Daily Update Service
+# Auto-generated by setup_daily_cron.py
+
+cd "{script_dir}"
+python3 run_batch_update.py
+
+if [ $? -ne 0 ]; then
+    echo "Error occurred during stock data update"
+    exit 1
+fi
+
+echo "Stock data update completed successfully"
+"""
+        shell_file = script_dir / "daily_update.sh"
+        with open(shell_file, 'w', encoding='utf-8') as f:
+            f.write(shell_content)
+        
+        os.chmod(shell_file, 0o755)
+        print(f"📄 Linux 셸 스크립트 생성: {shell_file}")
+        return shell_file
+
+def main():
+    print("🕐 Korean Stock Data - Daily Update Scheduler Setup")
+    print("=" * 60)
+    
+    current_os = platform.system()
+    print(f"💻 Detected OS: {current_os}")
+    print()
+    
+    # 서비스 스크립트 생성
+    service_script = setup_service_script()
+    print()
+    
+    if current_os == "Windows":
+        # Windows 작업 스케줄러 설정
+        xml_file = setup_windows_task()
+        
+        print()
+        print("🚀 빠른 테스트:")
+        print(f"   python {Path(__file__).parent / 'run_batch_update.py'}")
+        
+    elif current_os == "Linux":
+        # Linux crontab 설정
+        cron_entry = setup_linux_cron()
+        
+        print()
+        print("🚀 빠른 테스트:")
+        print(f"   python3 {Path(__file__).parent / 'run_batch_update.py'}")
+        
+    else:
+        print(f"⚠️  Unsupported OS: {current_os}")
+        print("   수동으로 스케줄링을 설정해주세요.")
+    
+    print()
+    print("📋 설정 완료 후 확인사항:")
+    print("1. 네트워크 연결 상태")
+    print("2. Python 라이브러리 설치 (pip install -r requirements.txt)")
+    print("3. 작업 실행 권한")
+    print("4. 로그 파일 저장 공간")
+    print()
+    print("✅ 스케줄러 설정이 완료되었습니다!")
+
+if __name__ == "__main__":
+    main()

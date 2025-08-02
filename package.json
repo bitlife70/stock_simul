@@ -1,0 +1,22 @@
+{
+  "name": "korean-stock-backtesting",
+  "version": "1.0.0",
+  "description": "Korean Stock Strategy Backtesting Application",
+  "scripts": {
+    "dev": "python start_dev.py",
+    "test": "python test_api.py",
+    "backend": "python api_server.py",
+    "frontend": "cd frontend && npm run dev",
+    "install-deps": "pip install fastapi uvicorn requests && cd frontend && npm install",
+    "build": "cd frontend && npm run build"
+  },
+  "keywords": [
+    "korean-stocks",
+    "backtesting",
+    "kospi",
+    "kosdaq",
+    "trading-strategy"
+  ],
+  "author": "Korean Stock Backtesting Team",
+  "license": "MIT"
+}
