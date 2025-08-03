@@ -25,6 +25,10 @@ except ImportError:
     EXTERNAL_APIS_AVAILABLE = False
     print("⚠️  FinanceDataReader, pykrx not installed. Using fallback data.")
 
+# 주가 데이터 캐시
+from functools import lru_cache
+from typing import Union
+
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -77,11 +81,30 @@ class KoreanStockDataManager:
                 )
             """)
             
+            # 주가 데이터 테이블
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS stock_prices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    open REAL,
+                    high REAL,
+                    low REAL,
+                    close REAL,
+                    volume INTEGER,
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(symbol, date)
+                )
+            """)
+            
             # 인덱스 생성
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_stocks_market ON stocks(market)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_stocks_sector ON stocks(sector)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_stocks_name_kr ON stocks(name_kr)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_stocks_market_cap ON stocks(market_cap DESC)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_stock_prices_symbol ON stock_prices(symbol)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_stock_prices_date ON stock_prices(date)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_stock_prices_symbol_date ON stock_prices(symbol, date)")
             
             conn.commit()
             logger.info(f"✅ Database initialized: {self.db_path}")
@@ -480,6 +503,220 @@ class KoreanStockDataManager:
             
             last_update = datetime.fromisoformat(result[0])
             return (datetime.now() - last_update).days >= 1  # 하루 지났으면 업데이트
+
+    def get_stock_price_data(self, symbol: str, start_date: Optional[str] = None, 
+                           end_date: Optional[str] = None, days: int = 365) -> List[Dict]:
+        """종목의 주가 데이터 조회 (OHLCV)"""
+        try:
+            # 날짜 범위 설정
+            if not end_date:
+                end_date = datetime.now().strftime('%Y-%m-%d')
+            
+            if not start_date:
+                start_dt = datetime.strptime(end_date, '%Y-%m-%d') - timedelta(days=days)
+                start_date = start_dt.strftime('%Y-%m-%d')
+            
+            # 캐시에서 먼저 확인
+            cached_data = self._get_cached_price_data(symbol, start_date, end_date)
+            if cached_data:
+                logger.info(f"📊 Using cached data for {symbol} ({len(cached_data)} records)")
+                return cached_data
+            
+            # 실제 데이터 가져오기
+            if EXTERNAL_APIS_AVAILABLE:
+                price_data = self._fetch_real_price_data(symbol, start_date, end_date)
+                if price_data:
+                    # 캐시에 저장
+                    self._cache_price_data(symbol, price_data)
+                    return price_data
+            
+            # 폴백: 가상 데이터 생성
+            logger.warning(f"⚠️  Using fallback data for {symbol}")
+            return self._generate_fallback_price_data(symbol, start_date, end_date)
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting price data for {symbol}: {str(e)}")
+            return self._generate_fallback_price_data(symbol, start_date, end_date)
+
+    def _get_cached_price_data(self, symbol: str, start_date: str, end_date: str) -> Optional[List[Dict]]:
+        """캐시된 주가 데이터 조회"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT date, open, high, low, close, volume
+                    FROM stock_prices 
+                    WHERE symbol = ? AND date >= ? AND date <= ?
+                    ORDER BY date ASC
+                """, (symbol, start_date, end_date))
+                
+                rows = cursor.fetchall()
+                if len(rows) > 5:  # 충분한 데이터가 있으면 캐시 사용
+                    return [
+                        {
+                            "date": row[0],
+                            "open": float(row[1]) if row[1] else 0,
+                            "high": float(row[2]) if row[2] else 0,
+                            "low": float(row[3]) if row[3] else 0,
+                            "close": float(row[4]) if row[4] else 0,
+                            "volume": int(row[5]) if row[5] else 0
+                        }
+                        for row in rows
+                    ]
+        except Exception as e:
+            logger.warning(f"⚠️  Cache lookup failed for {symbol}: {str(e)}")
+        
+        return None
+
+    def _fetch_real_price_data(self, symbol: str, start_date: str, end_date: str) -> Optional[List[Dict]]:
+        """실제 주가 데이터 조회 (pykrx 또는 FinanceDataReader)"""
+        try:
+            # 방법 1: pykrx 사용
+            try:
+                start_fmt = start_date.replace('-', '')
+                end_fmt = end_date.replace('-', '')
+                
+                df = stock.get_market_ohlcv_by_date(start_fmt, end_fmt, symbol)
+                
+                if not df.empty:
+                    logger.info(f"📈 Retrieved {len(df)} days of data for {symbol} via pykrx")
+                    
+                    price_data = []
+                    for date_str, row in df.iterrows():
+                        price_data.append({
+                            "date": date_str.strftime('%Y-%m-%d'),
+                            "open": float(row['시가']) if pd.notna(row['시가']) else 0,
+                            "high": float(row['고가']) if pd.notna(row['고가']) else 0,
+                            "low": float(row['저가']) if pd.notna(row['저가']) else 0,
+                            "close": float(row['종가']) if pd.notna(row['종가']) else 0,
+                            "volume": int(row['거래량']) if pd.notna(row['거래량']) else 0
+                        })
+                    
+                    return price_data
+            except Exception as e:
+                logger.warning(f"⚠️  pykrx failed for {symbol}: {str(e)}")
+            
+            # 방법 2: FinanceDataReader 사용
+            try:
+                df = fdr.DataReader(symbol, start_date, end_date)
+                
+                if not df.empty:
+                    logger.info(f"📈 Retrieved {len(df)} days of data for {symbol} via FDR")
+                    
+                    price_data = []
+                    for date_str, row in df.iterrows():
+                        price_data.append({
+                            "date": date_str.strftime('%Y-%m-%d'),
+                            "open": float(row['Open']) if pd.notna(row['Open']) else 0,
+                            "high": float(row['High']) if pd.notna(row['High']) else 0,
+                            "low": float(row['Low']) if pd.notna(row['Low']) else 0,
+                            "close": float(row['Close']) if pd.notna(row['Close']) else 0,
+                            "volume": int(row['Volume']) if pd.notna(row['Volume']) else 0
+                        })
+                    
+                    return price_data
+            except Exception as e:
+                logger.warning(f"⚠️  FinanceDataReader failed for {symbol}: {str(e)}")
+            
+        except Exception as e:
+            logger.error(f"❌ Real data fetch failed for {symbol}: {str(e)}")
+        
+        return None
+
+    def _cache_price_data(self, symbol: str, price_data: List[Dict]):
+        """주가 데이터를 캐시에 저장"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # 기존 데이터 삭제
+                cursor.execute("DELETE FROM stock_prices WHERE symbol = ?", (symbol,))
+                
+                # 새 데이터 삽입
+                for data in price_data:
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO stock_prices 
+                        (symbol, date, open, high, low, close, volume, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        symbol, data['date'], data['open'], data['high'],
+                        data['low'], data['close'], data['volume'],
+                        datetime.now().isoformat()
+                    ))
+                
+                conn.commit()
+                logger.info(f"💾 Cached {len(price_data)} price records for {symbol}")
+                
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to cache data for {symbol}: {str(e)}")
+
+    def _generate_fallback_price_data(self, symbol: str, start_date: str, end_date: str) -> List[Dict]:
+        """폴백용 가상 주가 데이터 생성"""
+        import random
+        
+        # 종목별 기준 가격 설정
+        base_prices = {
+            "005930": 70000,  # 삼성전자
+            "000660": 120000,  # SK하이닉스
+            "035420": 200000,  # NAVER
+            "035720": 50000,   # 카카오
+            "005380": 180000,  # 현대차
+        }
+        
+        base_price = base_prices.get(symbol, 50000)
+        
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        price_data = []
+        current_date = start_dt
+        current_price = base_price
+        
+        while current_date <= end_dt:
+            # 주말 건너뛰기
+            if current_date.weekday() < 5:  # 월-금요일만
+                # 일일 변동률 (-3% ~ +3%)
+                change_rate = random.uniform(-0.03, 0.03)
+                new_price = current_price * (1 + change_rate)
+                
+                # OHLC 생성
+                high = new_price * random.uniform(1.0, 1.02)
+                low = new_price * random.uniform(0.98, 1.0)
+                open_price = current_price * random.uniform(0.99, 1.01)
+                close_price = new_price
+                
+                volume = random.randint(100000, 5000000)
+                
+                price_data.append({
+                    "date": current_date.strftime('%Y-%m-%d'),
+                    "open": round(open_price),
+                    "high": round(high),
+                    "low": round(low),
+                    "close": round(close_price),
+                    "volume": volume
+                })
+                
+                current_price = new_price
+            
+            current_date += timedelta(days=1)
+        
+        logger.info(f"🎲 Generated {len(price_data)} fallback price records for {symbol}")
+        return price_data
+
+    def clear_price_cache(self, symbol: Optional[str] = None):
+        """주가 데이터 캐시 삭제"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                if symbol:
+                    cursor.execute("DELETE FROM stock_prices WHERE symbol = ?", (symbol,))
+                    logger.info(f"🗑️  Cleared price cache for {symbol}")
+                else:
+                    cursor.execute("DELETE FROM stock_prices")
+                    logger.info("🗑️  Cleared all price cache")
+                conn.commit()
+        except Exception as e:
+            logger.error(f"❌ Failed to clear cache: {str(e)}")
 
 # 전역 인스턴스
 stock_manager = KoreanStockDataManager()

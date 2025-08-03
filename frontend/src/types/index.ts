@@ -44,13 +44,40 @@ export interface BacktestResult {
   total_return: number;
   win_rate: number;
   total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
   max_drawdown: number;
   sharpe_ratio: number;
   final_capital: number;
+  cagr: number;
+  volatility: number;
+  profit_factor: number;
+  max_consecutive_wins: number;
+  max_consecutive_losses: number;
+  avg_profit: number;
+  avg_loss: number;
+  max_profit: number;
+  max_loss: number;
+  avg_hold_days: number;
+  total_fees: number;
+  net_profit: number;
+  benchmark_return?: number;
   daily_returns?: number[];
-  equity_curve?: Array<{ date: string; value: number }>;
-  trades?: Trade[];
+  equity_curve?: Array<{ date: string; value: number; benchmark?: number }>;
+  trades: BacktestTrade[];
   risk_metrics?: RiskMetrics;
+}
+
+export interface BacktestTrade {
+  entry_date: string;
+  exit_date: string;
+  entry_price: number;
+  exit_price: number;
+  quantity: number;
+  profit_loss: number;
+  profit_loss_percent: number;
+  hold_days: number;
+  trade_type: 'buy' | 'sell';
 }
 
 // Professional trading types
@@ -160,7 +187,7 @@ export interface StrategyParameter {
   name: string;
   name_kr: string;
   type: 'number' | 'string' | 'boolean' | 'select';
-  default_value: any;
+  default_value: string | number | boolean;
   min_value?: number;
   max_value?: number;
   options?: string[];

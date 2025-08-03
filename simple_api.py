@@ -95,6 +95,38 @@ def get_data_stats():
     """데이터베이스 상세 통계"""
     return stock_manager.get_stats()
 
+@app.delete("/api/v1/stocks/{symbol}/cache")
+def clear_stock_cache(symbol: str):
+    """특정 종목의 주가 데이터 캐시 삭제"""
+    try:
+        stock_manager.clear_price_cache(symbol)
+        return {
+            "status": "success",
+            "message": f"{symbol} 종목의 캐시가 삭제되었습니다.",
+            "symbol": symbol
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"캐시 삭제 중 오류가 발생했습니다: {str(e)}",
+            "symbol": symbol
+        }
+
+@app.delete("/api/v1/data/cache")
+def clear_all_cache():
+    """모든 주가 데이터 캐시 삭제"""
+    try:
+        stock_manager.clear_price_cache()
+        return {
+            "status": "success",
+            "message": "모든 주가 데이터 캐시가 삭제되었습니다."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"캐시 삭제 중 오류가 발생했습니다: {str(e)}"
+        }
+
 @app.get("/api/v1/strategies/templates")
 def get_templates():
     return [
@@ -123,27 +155,55 @@ def get_templates():
     ]
 
 @app.get("/api/v1/stocks/{symbol}/data")
-def get_stock_data(symbol: str):
-    # 간단한 샘플 데이터
-    import random
-    from datetime import datetime, timedelta
-    
-    data = []
-    base_price = 70000
-    current_date = datetime.now() - timedelta(days=30)
-    
-    for i in range(30):
-        data.append({
-            "date": current_date.strftime("%Y-%m-%d"),
-            "open": base_price + random.randint(-1000, 1000),
-            "high": base_price + random.randint(0, 2000),
-            "low": base_price - random.randint(0, 2000),
-            "close": base_price + random.randint(-1000, 1000),
-            "volume": random.randint(1000000, 10000000)
-        })
-        current_date += timedelta(days=1)
-    
-    return data
+def get_stock_data(
+    symbol: str, 
+    start_date: Optional[str] = Query(None, description="시작 날짜 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="종료 날짜 (YYYY-MM-DD)"),
+    days: int = Query(365, description="조회할 일수 (기본: 1년)")
+):
+    """특정 종목의 주가 데이터 조회 (OHLCV)"""
+    try:
+        # 실제 주가 데이터 조회
+        price_data = stock_manager.get_stock_price_data(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            days=days
+        )
+        
+        if not price_data:
+            return {
+                "error": "No data available", 
+                "symbol": symbol,
+                "message": "해당 종목의 주가 데이터를 찾을 수 없습니다."
+            }
+        
+        # 데이터 통계 추가
+        latest = price_data[-1]
+        first = price_data[0]
+        
+        return {
+            "symbol": symbol,
+            "data": price_data,
+            "meta": {
+                "total_records": len(price_data),
+                "start_date": first["date"],
+                "end_date": latest["date"],
+                "latest_price": latest["close"],
+                "price_change": latest["close"] - first["close"],
+                "price_change_pct": round((latest["close"] - first["close"]) / first["close"] * 100, 2) if first["close"] > 0 else 0
+            }
+        }
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Error fetching stock data for {symbol}: {str(e)}")
+        
+        return {
+            "error": "Internal server error",
+            "symbol": symbol,
+            "message": f"주가 데이터 조회 중 오류가 발생했습니다: {str(e)}"
+        }
 
 @app.post("/api/v1/backtest/run")
 def run_backtest(request: dict):
@@ -199,4 +259,4 @@ if __name__ == "__main__":
     print("  Sub-5ms response time")
     print("=" * 60)
     
-    uvicorn.run(app, host="0.0.0.0", port=8003, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=8005, reload=False)

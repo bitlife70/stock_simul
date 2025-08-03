@@ -46,6 +46,7 @@ KOSPI_STOCKS = [
     {"symbol": "090430", "name": "Amorepacific", "name_kr": "아모레퍼시픽", "sector": "화장품", "market_cap": 6000},
     {"symbol": "161390", "name": "Hanwha Q CELLS", "name_kr": "한화큐셀", "sector": "태양광", "market_cap": 5000},
     {"symbol": "047050", "name": "POSCO International", "name_kr": "포스코인터내셔널", "sector": "상사", "market_cap": 4000},
+    {"symbol": "022100", "name": "POSCO DX", "name_kr": "포스코DX", "sector": "IT서비스", "market_cap": 3500},
     {"symbol": "000720", "name": "Hyundai Engineering & Construction", "name_kr": "현대건설", "sector": "건설", "market_cap": 5000},
     {"symbol": "034730", "name": "SK", "name_kr": "SK", "sector": "지주회사", "market_cap": 15000},
     {"symbol": "018880", "name": "Korean Air", "name_kr": "대한항공", "sector": "항공", "market_cap": 4000},

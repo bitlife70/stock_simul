@@ -3,11 +3,13 @@
 Korean Stock Backtesting API Server - Simple Version
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import random
+import asyncio
 from datetime import datetime, timedelta
+from stock_data_manager import stock_manager, daily_batch_update
 
 # Create FastAPI app
 app = FastAPI(
@@ -49,55 +51,60 @@ async def health_check():
     }
 
 @app.get("/api/v1/stocks")
-async def get_stocks():
-    """Get list of Korean stocks"""
-    return [
-        {
-            "symbol": "005930",
-            "name": "Samsung Electronics",
-            "name_kr": "삼성전자",
-            "market": "KOSPI",
-            "sector": "기술주",
-            "current_price": 73000,
-            "change": 1.2
-        },
-        {
-            "symbol": "000660", 
-            "name": "SK Hynix",
-            "name_kr": "SK하이닉스",
-            "market": "KOSPI",
-            "sector": "기술주", 
-            "current_price": 125000,
-            "change": -0.8
-        },
-        {
-            "symbol": "035420",
-            "name": "NAVER Corporation",
-            "name_kr": "NAVER", 
-            "market": "KOSPI",
-            "sector": "기술주",
-            "current_price": 180000,
-            "change": 2.1
-        },
-        {
-            "symbol": "051910",
-            "name": "LG Chem",
-            "name_kr": "LG화학",
-            "market": "KOSPI", 
-            "sector": "화학",
-            "current_price": 400000,
-            "change": -1.5
-        },
-        {
-            "symbol": "068270",
-            "name": "Celltrion",
-            "name_kr": "셀트리온",
-            "market": "KOSPI",
-            "sector": "바이오",
-            "current_price": 160000,
-            "change": 3.2
-        }
-    ]
+async def get_stocks(limit: int = 1000):
+    """Get list of Korean stocks from local database"""
+    try:
+        stocks = stock_manager.get_all_stocks(limit=limit)
+        return stocks
+    except Exception as e:
+        # Fallback to sample data if database is empty
+        return [
+            {
+                "symbol": "005930",
+                "name": "Samsung Electronics",
+                "name_kr": "삼성전자",
+                "market": "KOSPI",
+                "sector": "기술주",
+                "current_price": 73000,
+                "change_rate": 0.012
+            },
+            {
+                "symbol": "000660", 
+                "name": "SK Hynix",
+                "name_kr": "SK하이닉스",
+                "market": "KOSPI",
+                "sector": "기술주", 
+                "current_price": 125000,
+                "change_rate": -0.008
+            },
+            {
+                "symbol": "035420",
+                "name": "NAVER Corporation",
+                "name_kr": "NAVER", 
+                "market": "KOSPI",
+                "sector": "기술주",
+                "current_price": 180000,
+                "change_rate": 0.021
+            },
+            {
+                "symbol": "051910",
+                "name": "LG Chem",
+                "name_kr": "LG화학",
+                "market": "KOSPI", 
+                "sector": "화학",
+                "current_price": 400000,
+                "change_rate": -0.015
+            },
+            {
+                "symbol": "068270",
+                "name": "Celltrion",
+                "name_kr": "셀트리온",
+                "market": "KOSPI",
+                "sector": "바이오",
+                "current_price": 160000,
+                "change_rate": 0.032
+            }
+        ]
 
 @app.get("/api/v1/strategies/templates")
 async def get_strategy_templates():
@@ -253,6 +260,68 @@ async def save_strategy(strategy: dict):
         "message": "Strategy saved successfully",
         "strategy": strategy
     }
+
+# Database and batch download endpoints
+@app.get("/api/v1/database/stats")
+async def get_database_stats():
+    """Get database statistics"""
+    try:
+        stats = stock_manager.get_stats()
+        return {
+            "success": True,
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/database/batch-download")
+async def trigger_batch_download(background_tasks: BackgroundTasks):
+    """Trigger batch download of all Korean stocks"""
+    try:
+        # Run the batch download in the background
+        background_tasks.add_task(run_batch_download_task)
+        
+        return {
+            "success": True,
+            "message": "배치 다운로드가 시작되었습니다. 수분이 소요될 수 있습니다.",
+            "status": "started"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/database/download-status")
+async def get_download_status():
+    """Get the status of the latest batch download"""
+    try:
+        stats = stock_manager.get_stats()
+        return {
+            "success": True,
+            "last_update": stats.get("last_update"),
+            "total_stocks": stats.get("total_stocks", 0),
+            "is_updating": False  # This could be enhanced to track real-time status
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/stocks/search")
+async def search_stocks(q: str, limit: int = 50):
+    """Search Korean stocks by symbol, name, or sector"""
+    try:
+        if not q or len(q.strip()) < 1:
+            return []
+        
+        results = stock_manager.search_stocks(q.strip(), limit=limit)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def run_batch_download_task():
+    """Background task to run batch download"""
+    try:
+        result = await daily_batch_update()
+        print(f"Batch download completed: {result}")
+    except Exception as e:
+        print(f"Batch download failed: {str(e)}")
 
 if __name__ == "__main__":
     print("=" * 60)

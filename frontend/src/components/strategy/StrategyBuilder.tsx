@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Play, Save, RefreshCw, Settings } from 'lucide-react';
 import type { Stock, StrategyTemplate, StrategyFormData } from '@/types';
+import { API_BASE_URL } from '@/lib/config';
 
 const strategySchema = z.object({
   name: z.string().min(1, '전략 이름을 입력해주세요'),
@@ -75,7 +76,7 @@ export default function StrategyBuilder({
   const fetchTemplates = async () => {
     setTemplatesLoading(true);
     try {
-      const response = await fetch('http://localhost:8002/api/v1/strategies/templates');
+      const response = await fetch(`${API_BASE_URL}/api/v1/strategies/templates`);
       const data = await response.json();
       setTemplates(data);
     } catch (error) {
